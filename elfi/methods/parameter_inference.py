@@ -1062,11 +1062,16 @@ class BayesianOptimization(ParameterInference):
 
         This feature is still experimental and currently supports only 2D cases.
         """
+        gp = self.target_model
+
+        try:
+            one = gp.bounds[1]
+        except Exception:
+            logger.warning(" Currently we are supporting only 2D cases")
+
         f = plt.gcf()
         if len(f.axes) < 2:
             f, _ = plt.subplots(1, 2, figsize=(13, 6), sharex='row', sharey='row')
-
-        gp = self.target_model
 
         # Draw the GP surface
         visin.draw_contour(
