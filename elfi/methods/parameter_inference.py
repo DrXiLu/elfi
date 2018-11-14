@@ -1064,10 +1064,8 @@ class BayesianOptimization(ParameterInference):
         """
         gp = self.target_model
 
-        try:
-            one = gp.bounds[1]
-        except Exception:
-            logger.warning(" Currently we are supporting only 2D cases")
+        if len(gp.bounds) != 2:
+            logger.warning(" Currently only 2D cases are supported.")
 
         f = plt.gcf()
         if len(f.axes) < 2:
