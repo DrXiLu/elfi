@@ -52,7 +52,7 @@ lint: ## check style with flake8
 	flake8 elfi tests
 
 test: ## run tests quickly with the default Python
-	PYTHONPATH=$$PYTHONPATH:. py.test --reruns 1
+	PYTHONPATH=$$PYTHONPATH:. py.test --reruns 5 --reruns-delay 1
 
 test-all: ## run tests on every Python version with tox
 	tox
