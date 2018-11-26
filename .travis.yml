@@ -28,5 +28,5 @@ install:
 script:
   - ipcluster start -n 2 --daemon
   #- travis_wait 20 make test
-  - travis_wait make test
+  - make test
   - ipcluster stop
