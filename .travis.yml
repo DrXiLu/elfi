@@ -27,10 +27,9 @@ install:
 
 script:
   - ipcluster start -n 2 --daemon
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-        travis_wait 13 make test
-        ;;
+  - 'if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+        travis_wait 13 make test;
     else
-        make test
-    fi
+        make test;
+    fi'
   - ipcluster stop
