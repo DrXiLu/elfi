@@ -25,6 +25,7 @@ install:
   - pip install -e .
 
 script:
-  - ipcluster start -n 2 --daemon
+  - ipcluster start -n 2
   #- travis_wait 20 make test
   - make test
+  - ipcluster stop
