@@ -116,9 +116,6 @@ class Client(elfi.client.ClientBase):
         """Return the number of processes."""
         return len(self.view)
 
-    def stop(self):
-        self.ipp_client.stop()
-
 
 # TODO: use import hook instead? https://docs.python.org/3/reference/import.html
 set_as_default()
