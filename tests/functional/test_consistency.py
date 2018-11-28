@@ -41,7 +41,7 @@ def test_rejection(ma2):
 @pytest.mark.usefixtures('with_all_clients')
 def test_smc(ma2):
     bs = 3
-    n_samples = 10
+    n_samples = 4
     thresholds = [1, .9, .8]
 
     smc = elfi.SMC(ma2, 'd', batch_size=bs)
