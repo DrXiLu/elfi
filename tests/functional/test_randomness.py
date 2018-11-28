@@ -19,7 +19,7 @@ def test_randomness(simple_model):
 def test_randomness2(simple_model):
     k1 = simple_model['k1']
 
-    n = 30
+    n = 5
     samples1 = elfi.Rejection(simple_model['k1'], batch_size=3).sample(n).samples['k1']
     assert len(np.unique(samples1)) == n
 
