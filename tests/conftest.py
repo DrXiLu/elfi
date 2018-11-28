@@ -31,22 +31,27 @@ def pytest_addoption(parser):
 """Functional fixtures"""
 
 
-@pytest.fixture(scope="session", params=[native, eipp, mp])
+@pytest.fixture(scope="session", params=[native, mp])
 def client(request):
     """Provides a fixture for all the different supported clients
     """
 
     client_module = request.param
+    # print("Client module", client_module)
     client_name = client_module.__name__.split('.')[-1]
+    # print("Client name", client_name)
     use_client = request.config.getoption('--client')
+    # print("Use client", use_client)
 
     if use_client != 'all' and use_client != client_name:
         pytest.skip("Skipping client {}".format(client_name))
 
     try:
         client = client_module.Client()
+        # print("I am in try", client)
     except BaseException:
         pytest.skip("Client {} not available".format(client_name))
+        # print("I am in except")
 
     yield client
 
