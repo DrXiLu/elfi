@@ -55,6 +55,9 @@ def client(request):
 
     yield client
 
+    if client and client_name == 'ipyparallel':
+        client.stop()
+
     # Run cleanup code here if needed
 
 
