@@ -31,7 +31,7 @@ def pytest_addoption(parser):
 """Functional fixtures"""
 
 
-@pytest.fixture(scope="session", params=[native, eipp, mp])
+@pytest.fixture(scope="session", params=[native, mp, eipp])
 def client(request):
     """Provides a fixture for all the different supported clients
     """
@@ -39,34 +39,26 @@ def client(request):
     client_module = request.param
     client_name = client_module.__name__.split('.')[-1]
     use_client = request.config.getoption('--client')
-    print(client_name)
 
     if use_client != 'all' and use_client != client_name:
         pytest.skip("Skipping client {}".format(client_name))
 
-    try:
-        client = client_module.Client()
-    except BaseException:
-        pytest.skip("Client {} not available".format(client_name))
+    if client_name != 'ipyparallel':
+        try:
+            client = client_module.Client()
+        except BaseException:
+            pytest.skip("Client {} not available".format(client_name))
 
-    if client_name == 'ipyparallel':
-        # def iptest_stdstreams_fileno():
-        #     import os
-        #     return os.open(os.devnull, os.O_WRONLY)
+        yield client
 
-        # from ipyparallel import Client
+    else:
         import ipyparallel.tests
-        ipyparallel.tests.setup()
 
-        # Start two engines engine (one is launched by setup()).
+        # Start two engines (one engine is launched by setup()).
         ipyparallel.tests.setup()
         ipyparallel.tests.add_engines(1)
         yield client_module.Client(profile='iptest')
         ipyparallel.tests.teardown()
-
-    else:
-        yield client
-    # Run cleanup code here if needed
 
 
 @pytest.fixture()
