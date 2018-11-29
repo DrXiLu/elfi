@@ -7,6 +7,7 @@ import itertools
 import logging
 
 import ipyparallel as ipp
+from ipyparallel import Client as IPyClient
 
 import elfi.client
 
@@ -19,7 +20,7 @@ def set_as_default():
     elfi.client.set_default_class(Client)
 
 
-class Client(elfi.client.ClientBase):
+class Client(elfi.client.ClientBase, IPyClient):
     """A multiprocessing client using ipyparallel.
 
     http://ipyparallel.readthedocs.io

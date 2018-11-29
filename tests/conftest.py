@@ -37,24 +37,35 @@ def client(request):
     """
 
     client_module = request.param
-    print("Client module", client_module)
     client_name = client_module.__name__.split('.')[-1]
-    print("Client name", client_name)
     use_client = request.config.getoption('--client')
-    print("Use client", use_client)
+    print(client_name)
 
     if use_client != 'all' and use_client != client_name:
         pytest.skip("Skipping client {}".format(client_name))
 
     try:
         client = client_module.Client()
-        print("I am in try. This is client:", client)
     except BaseException:
         pytest.skip("Client {} not available".format(client_name))
-        print("I am in except. Client doesn't found :(")
 
-    yield client
+    if client_name == 'ipyparallel':
+        # def iptest_stdstreams_fileno():
+        #     import os
+        #     return os.open(os.devnull, os.O_WRONLY)
 
+        # from ipyparallel import Client
+        import ipyparallel.tests
+        ipyparallel.tests.setup()
+
+        # Start two engines engine (one is launched by setup()).
+        ipyparallel.tests.setup()
+        ipyparallel.tests.add_engines(1)
+        yield client_module.Client(profile='iptest')
+        ipyparallel.tests.teardown()
+
+    else:
+        yield client
     # Run cleanup code here if needed
 
 

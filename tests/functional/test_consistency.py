@@ -41,7 +41,7 @@ def test_rejection(ma2):
 @pytest.mark.usefixtures('with_all_clients')
 def test_smc(ma2):
     bs = 3
-    n_samples = 4
+    n_samples = 10
     thresholds = [1, .9, .8]
 
     smc = elfi.SMC(ma2, 'd', batch_size=bs)
@@ -61,8 +61,8 @@ def test_smc(ma2):
 def test_bo(ma2):
     bs = 2
     upd_int = 1
-    n_evi = 6
-    init_evi = 4
+    n_evi = 16
+    init_evi = 10
     bounds = {'t1': (-2, 2), 't2': (-1, 1)}
     anv = .1
 
@@ -111,8 +111,8 @@ def test_bolfi(ma2):
     bs = 2
     n_samples = 4
     upd_int = 1
-    n_evi = 6
-    init_evi = 4
+    n_evi = 16
+    init_evi = 10
     bounds = {'t1': (-2, 2), 't2': (-1, 1)}
     anv = .1
     nchains = 2
