@@ -43,15 +43,12 @@ def client(request):
     if use_client != 'all' and use_client != client_name:
         pytest.skip("Skipping client {}".format(client_name))
 
-    if client_name != 'ipyparallel':
-        try:
-            client = client_module.Client()
-        except BaseException:
-            pytest.skip("Client {} not available".format(client_name))
+    try:
+        client = client_module
+    except BaseException:
+        pytest.skip("Client {} not available".format(client_name))
 
-        yield client
-
-    else:
+    if client_name == 'ipyparallel':
         import ipyparallel.tests
 
         # Start two engines (one engine is launched by setup()).
@@ -59,6 +56,9 @@ def client(request):
         ipyparallel.tests.add_engines(1)
         yield client_module.Client(profile='iptest')
         ipyparallel.tests.teardown()
+
+    else:
+        yield client.Client()
 
 
 @pytest.fixture()
