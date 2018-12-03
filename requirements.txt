@@ -1,7 +1,7 @@
 numpy==1.15.1
 scipy==1.1.0
 matplotlib==2.2.2
-GPy==1.9.3
+GPy==1.9.5
 networkX>=1.11,<2.0
 ipyparallel==6.2.2
 toolz==0.9
