@@ -1131,7 +1131,27 @@ class BayesianOptimization(ParameterInference):
         axes[0].set_ylabel('Discrepancy')
 
         return axes
-
+    
+    def __getstate__(self):
+        """Return state of the BOLFI fit to enable
+            storage in a pickle for subsequent sampling
+            of the surrogate posterior without refitting
+        """
+        return self.model,self.output_names,self.batch_size,self.seed,self.max_parallel_batches,self.state,self.target_model, self.target_name, self.update_interval, self.async, self.n_precomputed_evidence, self.objective
+    
+    def __setstate__(self, state):
+        """Acquire state of the BOLFI fit to enable
+            retrieval from a pickle for subsequent sampling
+            of the surrogate posterior without refitting
+            """
+        super(BayesianOptimization, self).__init__(state[0], state[1], batch_size = state[2], seed = state[3], max_parallel_batches = state[4])
+        self.state = state[5]
+        self.target_model = state[6]
+        self.target_name = state[7]
+        self.update_interval = state[9]
+        self.async = state[9]
+        self.n_precomputed_evidence = state[10]
+        self.objective = state[11]
 
 class BOLFI(BayesianOptimization):
     """Bayesian Optimization for Likelihood-Free Inference (BOLFI).
