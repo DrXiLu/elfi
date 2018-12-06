@@ -449,7 +449,7 @@ class SmcSample(Sample):
 class BolfiSample(Sample):
     """Container for results from BOLFI."""
 
-    def __init__(self, method_name, chains, parameter_names, warmup, **kwargs):
+    def __init__(self, method_name, algorithm, chains, parameter_names, warmup, **kwargs):
         """Initialize result.
 
         Parameters
@@ -467,10 +467,14 @@ class BolfiSample(Sample):
         chains = chains.copy()
         shape = chains.shape
         n_chains = shape[0]
-        warmed_up = chains[:, warmup:, :]
-        concatenated = warmed_up.reshape((-1,) + shape[2:])
-        outputs = dict(zip(parameter_names, concatenated.T))
-
+        
+        if algorithm=='nuts':
+            warmed_up = chains[:, warmup:, :]
+            concatenated = warmed_up.reshape((-1, ) + shape[2:])
+            outputs = dict(zip(parameter_names, concatenated.T))
+        elif algorithm=='smc':
+            outputs = dict(zip(parameter_names, chains.T))
+        
         super(BolfiSample, self).__init__(
             method_name=method_name,
             outputs=outputs,

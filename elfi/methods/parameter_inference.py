@@ -1322,6 +1322,7 @@ class BOLFI(BayesianOptimization):
 
         return BolfiSample(
             method_name='BOLFI',
+            algorithm=algorithm,
             chains=chains,
             parameter_names=self.parameter_names,
             warmup=warmup,
