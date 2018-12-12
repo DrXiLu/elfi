@@ -10,6 +10,7 @@ import numpy as np
 
 import elfi.client
 import elfi.methods.mcmc as mcmc
+import elfi.methods.smc as smc
 import elfi.visualization.interactive as visin
 import elfi.visualization.visualization as vis
 from elfi.loader import get_sub_seed
@@ -22,7 +23,6 @@ from elfi.methods.utils import (GMDistribution, ModelPrior, arr2d_to_batch,
                                 batch_to_arr2d, ceil_to_batch_size, weighted_var)
 from elfi.model.elfi_model import ComputationContext, ElfiModel, NodeReference
 from elfi.utils import is_array
-from elfi.visualization.visualization import progress_bar
 
 logger = logging.getLogger(__name__)
 
@@ -235,17 +235,10 @@ class ParameterInference:
         """
         raise NotImplementedError
 
-    def infer(self, *args, vis=None, bar=True, **kwargs):
+    def infer(self, *args, vis=None, **kwargs):
         """Set the objective and start the iterate loop until the inference is finished.
 
         See the other arguments from the `set_objective` method.
-
-        Parameters
-        ----------
-        vis : dict, optional
-            Plotting options. More info in self.plot_state method
-        bar : bool, optional
-            Flag to remove (False) or keep (True) the progress bar from/in output.
 
         Returns
         -------
@@ -256,18 +249,10 @@ class ParameterInference:
 
         self.set_objective(*args, **kwargs)
 
-        if bar:
-            progress_bar(0, self._objective_n_batches, prefix='Progress:',
-                         suffix='Complete', length=50)
-
         while not self.finished:
             self.iterate()
             if vis:
                 self.plot_state(interactive=True, **vis_opt)
-
-            if bar:
-                progress_bar(self.state['n_batches'], self._objective_n_batches,
-                             prefix='Progress:', suffix='Complete', length=50)
 
         self.batches.cancel_pending()
         if vis:
@@ -312,12 +297,14 @@ class ParameterInference:
         return self._objective_n_batches <= self.state['n_batches']
 
     def _allow_submit(self, batch_index):
-        return (self.max_parallel_batches > self.batches.num_pending and
-                self._has_batches_to_submit and (not self.batches.has_ready()))
+        return self.max_parallel_batches > self.batches.num_pending and \
+            self._has_batches_to_submit and \
+            (not self.batches.has_ready())
 
     @property
     def _has_batches_to_submit(self):
-        return self._objective_n_batches > self.state['n_batches'] + self.batches.num_pending
+        return self._objective_n_batches > \
+            self.state['n_batches'] + self.batches.num_pending
 
     @property
     def _objective_n_batches(self):
@@ -401,9 +388,7 @@ class Sampler(ParameterInference):
         result : Sample
 
         """
-        bar = kwargs.pop('bar', True)
-
-        return self.infer(n_samples, *args, bar=bar, **kwargs)
+        return self.infer(n_samples, *args, **kwargs)
 
     def _extract_result_kwargs(self):
         kwargs = super(Sampler, self)._extract_result_kwargs()
@@ -853,7 +838,8 @@ class BayesianOptimization(ParameterInference):
         super(BayesianOptimization, self).__init__(
             model, output_names, batch_size=batch_size, **kwargs)
 
-        target_model = target_model or GPyRegression(self.model.parameter_names, bounds=bounds)
+        target_model = target_model or \
+            GPyRegression(self.model.parameter_names, bounds=bounds)
 
         self.target_name = target_name
         self.target_model = target_model
@@ -866,11 +852,12 @@ class BayesianOptimization(ParameterInference):
             self.target_model.update(params, precomputed[target_name])
 
         self.batches_per_acquisition = batches_per_acquisition or self.max_parallel_batches
-        self.acquisition_method = acquisition_method or LCBSC(self.target_model,
-                                                              prior=ModelPrior(self.model),
-                                                              noise_var=acq_noise_var,
-                                                              exploration_rate=exploration_rate,
-                                                              seed=self.seed)
+        self.acquisition_method = acquisition_method or \
+            LCBSC(self.target_model,
+                  prior=ModelPrior(self.model),
+                  noise_var=acq_noise_var,
+                  exploration_rate=exploration_rate,
+                  seed=self.seed)
 
         self.n_initial_evidence = n_initial
         self.n_precomputed_evidence = n_precomputed
@@ -1131,7 +1118,7 @@ class BayesianOptimization(ParameterInference):
         axes[0].set_ylabel('Discrepancy')
 
         return axes
-    
+
     def __getstate__(self):
         """Return state of the BOLFI fit to enable
             storage in a pickle for subsequent sampling
@@ -1170,7 +1157,7 @@ class BOLFI(BayesianOptimization):
 
     """
 
-    def fit(self, n_evidence, threshold=None, bar=True):
+    def fit(self, n_evidence, threshold=None):
         """Fit the surrogate model.
 
         Generates a regression model for the discrepancy given the parameters.
@@ -1179,12 +1166,8 @@ class BOLFI(BayesianOptimization):
 
         Parameters
         ----------
-        n_evidence : int, required
-            Number of evidence for fitting
         threshold : float, optional
             Discrepancy threshold for creating the posterior (log with log discrepancy).
-        bar : bool, optional
-            Flag to remove (False) the progress bar from output.
 
         """
         logger.info("BOLFI: Fitting the surrogate model...")
@@ -1193,7 +1176,7 @@ class BOLFI(BayesianOptimization):
             raise ValueError(
                 'You must specify the number of evidence (n_evidence) for the fitting')
 
-        self.infer(n_evidence, bar=bar)
+        self.infer(n_evidence)
         return self.extract_posterior(threshold)
 
     def extract_posterior(self, threshold=None):
@@ -1224,6 +1207,7 @@ class BOLFI(BayesianOptimization):
                initials=None,
                algorithm='nuts',
                n_evidence=None,
+               iterations=10,
                **kwargs):
         r"""Sample the posterior distribution of BOLFI.
 
@@ -1291,17 +1275,34 @@ class BOLFI(BayesianOptimization):
                 if ii_initial == len(inds):
                     raise ValueError(
                         "BOLFI.sample: Cannot find enough acceptable initialization points!")
+        
+            if algorithm == 'nuts':
+                tasks_ids.append(
+                    self.client.apply(
+                            mcmc.nuts,
+                            n_samples,
+                            initials[ii_initial],
+                            posterior.logpdf,
+                            posterior.gradient_logpdf,
+                            n_adapt=warmup,
+                            seed=seed,
+                            **kwargs
+                        )
+                )
 
-            tasks_ids.append(
-                self.client.apply(
-                    mcmc.nuts,
-                    n_samples,
-                    initials[ii_initial],
-                    posterior.logpdf,
-                    posterior.gradient_logpdf,
-                    n_adapt=warmup,
-                    seed=seed,
-                    **kwargs))
+            elif algorithm == 'smc':
+                tasks_ids.append(
+                    self.client.apply(
+                            smc.smc,
+                            n_samples=n_samples,
+                            prior=posterior.prior,
+                            iterations=n_samples*2, # not sure what value this should take
+                            params0= initials[ii_initial],
+                            target=posterior.logpdf,
+                            seed=seed
+                    )
+                )
+
             ii_initial += 1
 
         # get results from completed tasks or run sampling (client-specific)
@@ -1322,10 +1323,11 @@ class BOLFI(BayesianOptimization):
 
         return BolfiSample(
             method_name='BOLFI',
-            algorithm=algorithm,
             chains=chains,
+            algorithm=algorithm,
             parameter_names=self.parameter_names,
             warmup=warmup,
             threshold=float(posterior.threshold),
             n_sim=self.state['n_sim'],
             seed=self.seed)
+
