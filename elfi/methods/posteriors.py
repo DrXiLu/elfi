@@ -136,7 +136,7 @@ class BolfiPosterior:
         x = x.reshape((-1, self.dim))
 
         logpdf = -np.ones(len(x)) * np.inf
-
+        print("x: " + str(x) + " within: " + str(self._within_bounds(x)))
         logi = self._within_bounds(x)
         x = x[logi, :]
         if len(x) == 0:
@@ -204,8 +204,8 @@ class BolfiPosterior:
         x = x.reshape((-1, self.dim))
         logical = np.ones(len(x), dtype=bool)
         for i in range(self.dim):
-            logical *= (x[:, i] >= self.model.bounds[i][0])
-            logical *= (x[:, i] <= self.model.bounds[i][1])
+            logical *= (float(x[:, i]) >= self.model.bounds[i][0])
+            logical *= (float(x[:, i]) <= self.model.bounds[i][1])
         return logical
 
     def plot(self, logpdf=False):

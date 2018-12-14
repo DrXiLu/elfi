@@ -1132,6 +1132,26 @@ class BayesianOptimization(ParameterInference):
 
         return axes
 
+    def __getstate__(self):
+        """Return state of the BOLFI fit to enable
+            storage in a pickle for subsequent sampling
+            of the surrogate posterior without refitting
+            """
+        return self.model,self.output_names,self.batch_size,self.seed,self.max_parallel_batches,self.state,self.target_model, self.target_name, self.update_interval, self.async, self.n_precomputed_evidence, self.objective
+        
+    def __setstate__(self, state):
+        """Acquire state of the BOLFI fit to enable
+            retrieval from a pickle for subsequent sampling
+            of the surrogate posterior without refitting
+            """
+        super(BayesianOptimization, self).__init__(state[0], state[1], batch_size = state[2], seed = state[3], max_parallel_batches = state[4])
+        self.state = state[5]
+        self.target_model = state[6]
+        self.target_name = state[7]
+        self.update_interval = state[9]
+        self.async = state[9]
+        self.n_precomputed_evidence = state[10]
+        self.objective = state[11]
 
 class BOLFI(BayesianOptimization):
     """Bayesian Optimization for Likelihood-Free Inference (BOLFI).
@@ -1259,9 +1279,9 @@ class BOLFI(BayesianOptimization):
         if initials is not None:
             if np.asarray(initials).shape != (n_chains, self.target_model.input_dim):
                 raise ValueError("The shape of initials must be (n_chains, n_params).")
-        else:
-            inds = np.argsort(self.target_model.Y[:, 0])
-            initials = np.asarray(self.target_model.X[inds])
+        
+        initials = np.asarray(self.target_model.X[inds])
+        inds = np.argsort(self.target_model.Y[:, 0])
 
         self.target_model.is_sampling = True  # enables caching for default RBF kernel
 
@@ -1277,9 +1297,12 @@ class BOLFI(BayesianOptimization):
             # discard bad initialization points
             while np.isinf(posterior.logpdf(initials[ii_initial])):
                 ii_initial += 1
-                if ii_initial == len(inds):
+                if initials is None and ii_initial == len(inds):
                     raise ValueError(
                         "BOLFI.sample: Cannot find enough acceptable initialization points!")
+                elif initials is not None and ii_initial > 0:
+                    raise ValueError(
+                         "BOLFI.sample: Provided initialisation points have an infinite log pdf!")
 
             if algorithm == 'nuts':
                 tasks_ids.append(
