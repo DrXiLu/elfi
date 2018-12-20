@@ -5,7 +5,7 @@ import logging
 import numpy as np
 import matplotlib.pyplot as plt
 
-from elfi.methods.utils import (GMDistribution, weighted_var)
+from elfi.methods.utils import (GMDistribution, weighted_var, arr2d_to_batch)
 
 logger = logging.getLogger(__name__)
 
@@ -37,13 +37,16 @@ def smc(n_samples, prior, iterations, params0, target, seed=0):
 
     random_state = np.random.RandomState(seed)
     samples = prior.rvs(size=n_samples, random_state=random_state)# how to sample from prior?
+#    sampled_values = prior.rvs(size=n_samples, random_state=random_state)# how to sample from prior?
+#    samples = arr2d_to_batch(sampled_values, prior.parameter_names)
+#    print("SAMPLES: " +str(samples))
     w = np.ones(n_samples)
     cov = 2 * np.diag(weighted_var(samples, w))
     for i in range(1,iterations):
         samples_old = samples
         samples = GMDistribution.rvs(means=samples_old,cov=cov,size=n_samples)
         q_logpdf = GMDistribution.logpdf(x=samples,means=list(samples_old),cov=cov)
-        p_logpdf = target(samples)
+        p_logpdf = target(samples[5,:])
         w = np.exp(p_logpdf - np.max(p_logpdf) - q_logpdf)
         cov = 2 * np.diag(weighted_var(samples, w/np.sum(w)))
         ind = np.random.choice(np.arange(n_samples), n_samples, replace=True, p = w/np.sum(w))

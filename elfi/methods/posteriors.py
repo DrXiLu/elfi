@@ -206,6 +206,7 @@ class BolfiPosterior:
         for i in range(self.dim):
             logical *= (x[:, i] >= self.model.bounds[i][0])
             logical *= (x[:, i] <= self.model.bounds[i][1])
+#            print("LOGIC: " + str(logical) + " I: " + str(i) + " lower: " + str(self.model.bounds[i][0]) + " upper: " + str(self.model.bounds[i][1]) + " value: " + str(x[:, i]))
         return logical
 
     def plot(self, logpdf=False):
