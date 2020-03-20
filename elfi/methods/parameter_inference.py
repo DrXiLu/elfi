@@ -1118,7 +1118,29 @@ class BayesianOptimization(ParameterInference):
         axes[0].set_ylabel('Discrepancy')
 
         return axes
+    
+    def plot_gp(self, axes=None, resol=50, const=None, bounds=None, true_params=None, **kwargs):
+        """Plot pairwise relationships as a matrix with parameters vs. discrepancy.
 
+        Parameters
+        ----------
+        axes : matplotlib.axes.Axes, optional
+        resol : int, optional
+            Resolution of the plotted grid.
+        const : np.array, optional
+            Values for parameters in plots where held constant. Defaults to minimum evidence.
+        bounds: list of tuples, optional
+            List of tuples for axis boundaries.
+        true_params : dict, optional
+            Dictionary containing parameter names with corresponding true parameter values.
+
+        Returns
+        -------
+        axes : np.array of plt.Axes
+
+        """
+        return vis.plot_gp(self.target_model, self.parameter_names, axes,
+                           resol, const, bounds, true_params, **kwargs)
     def __getstate__(self):
         """Return state of the BOLFI fit to enable
             storage in a pickle for subsequent sampling
