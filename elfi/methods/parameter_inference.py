@@ -1327,6 +1327,19 @@ class BOLFI(BayesianOptimization):
                     )
                 )
 
+            elif algorithm == 'metropolis':
+                tasks_ids.append(
+                    self.client.apply(
+                            mcmc.metropolis,
+                            n_samples,
+                            initials[ii_initial],
+                            posterior.logpdf,
+                            [0.1] * self.target_model.input_dim,
+                            warmup=warmup,
+                            seed=seed
+                        )
+                )
+
             ii_initial += 1
 
         # get results from completed tasks or run sampling (client-specific)
