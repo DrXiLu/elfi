@@ -1326,7 +1326,7 @@ class BOLFI(BayesianOptimization):
                             seed=seed
                     )
                 )
-
+                
             elif algorithm == 'metropolis':
                 tasks_ids.append(
                     self.client.apply(
@@ -1334,7 +1334,8 @@ class BOLFI(BayesianOptimization):
                             n_samples,
                             initials[ii_initial],
                             posterior.logpdf,
-                            [0.1] * self.target_model.input_dim,
+                            #[0.1] * self.target_model.input_dim,
+                            0.1 * initials[1,:], # 10% of initial values
                             warmup=warmup,
                             seed=seed
                         )
