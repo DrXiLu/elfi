@@ -1335,7 +1335,7 @@ class BOLFI(BayesianOptimization):
                             initials[ii_initial],
                             posterior.logpdf,
                             #[0.1] * self.target_model.input_dim,
-                            0.1 * initials[1,:], # 10% of initial values
+                            0.05 * initials[1,:], # 10% of initial values
                             warmup=warmup,
                             seed=seed
                         )
