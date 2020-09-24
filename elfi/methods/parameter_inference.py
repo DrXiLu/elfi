@@ -1276,29 +1276,35 @@ class BOLFI(BayesianOptimization):
         warmup = warmup or n_samples // 2
 
         # Unless given, select the evidence points with smallest discrepancy
-        inds = np.argsort(self.target_model.Y[:, 0])
+        inds = None
         if initials is not None:
             if np.asarray(initials).shape != (n_chains, self.target_model.input_dim):
                 raise ValueError("The shape of initials must be (n_chains, n_params).")
-            inds = range(n_chains)
         else:
+            inds = np.argsort(self.target_model.Y[:, 0])
             initials = np.asarray(self.target_model.X[inds])
 
         self.target_model.is_sampling = True  # enables caching for default RBF kernel
 
         tasks_ids = []
         ii_initial = 0
-
+        retries = 100
+        
         # sampling is embarrassingly parallel, so depending on self.client this may parallelize
         for ii in range(n_chains):
             seed = get_sub_seed(self.seed, ii)
             # discard bad initialization points
-            print("IND: " + str(inds) + " initial " + str(initials[ii_initial]))
-            while np.isinf(posterior.logpdf(initials[ii_initial])):
-                ii_initial += 1
-                if ii_initial == len(inds):
+            while np.isinf(posterior.logpdf(initials[ii])):
+                if ii_initial == retries or (inds is not None and ii_initial > inds):
                     raise ValueError(
                         "BOLFI.sample: Cannot find enough acceptable initialization points!")
+                else:
+                    if inds is None:
+                        for i in range(len(initials[ii])):
+                            initials[ii][i] = initials[ii][i] + 0.1*initials[ii][i]*(np.random.rand()-0.5)
+                    else:
+                        initials[ii] = initials[ii_initial]
+                    ii_initial += 1
         
             if algorithm == 'nuts':
                 tasks_ids.append(
