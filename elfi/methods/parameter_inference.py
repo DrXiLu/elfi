@@ -1301,7 +1301,7 @@ class BOLFI(BayesianOptimization):
                 else:
                     if inds is None:
                         sys.stderr.write('Failed with initial paramter set ' + str(initials[ii]) + '; varying parameters\n'
-                        for i in range(len(initials[ii])):
+                        for i,v in enumerate(initials[ii]):
                             initials[ii][i] = initials[ii][i] + 0.1*initials[ii][i]*(np.random.rand()-0.5)
                     else:
                         sys.stderr.write('Failed with initial paramter set ' + str(initials[ii]) + '; using alternative set\n'
