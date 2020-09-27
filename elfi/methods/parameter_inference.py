@@ -1288,10 +1288,10 @@ class BOLFI(BayesianOptimization):
 
         tasks_ids = []
         retries = kwargs['max_retry_inits']
+        ii_initial = 0
         
         # sampling is embarrassingly parallel, so depending on self.client this may parallelize
         for ii in range(n_chains):
-            ii_initial = 0
             seed = get_sub_seed(self.seed, ii)
             # discard bad initialization points
             while np.isinf(posterior.logpdf(initials[ii])):
@@ -1313,7 +1313,7 @@ class BOLFI(BayesianOptimization):
                     self.client.apply(
                             mcmc.nuts,
                             n_samples,
-                            initials[ii_initial],
+                            initials[ii],
                             posterior.logpdf,
                             posterior.gradient_logpdf,
                             n_adapt=warmup,
@@ -1329,7 +1329,7 @@ class BOLFI(BayesianOptimization):
                             n_samples=n_samples,
                             prior=posterior.prior,
                             iterations=n_samples*2, # not sure what value this should take
-                            params0= initials[ii_initial],
+                            params0= initials[ii],
                             target=posterior.logpdf,
                             seed=seed
                     )
@@ -1340,7 +1340,7 @@ class BOLFI(BayesianOptimization):
                     self.client.apply(
                             mcmc.metropolis,
                             n_samples,
-                            initials[ii_initial],
+                            initials[ii],
                             posterior.logpdf,
                             kwargs['sigma_proposals'], # 10% of initial values
                             warmup=warmup,
