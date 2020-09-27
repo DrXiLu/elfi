@@ -1300,11 +1300,11 @@ class BOLFI(BayesianOptimization):
                         "BOLFI.sample: Cannot find enough acceptable initialization points!")
                 else:
                     if inds is None:
-                        sys.stderr.write('Failed with initial paramter set ' + str(initials[ii]) + '; varying parameters\n'
+                        sys.stderr.write('Failed with initial paramter set ' + str(initials[ii]) + '; varying parameters\n')
                         for i,v in enumerate(initials[ii]):
                             initials[ii][i] = initials[ii][i] + 0.1*initials[ii][i]*(np.random.rand()-0.5)
                     else:
-                        sys.stderr.write('Failed with initial paramter set ' + str(initials[ii]) + '; using alternative set\n'
+                        sys.stderr.write('Failed with initial paramter set ' + str(initials[ii]) + '; using alternative set\n')
                         initials[ii] = initials[ii_initial]
                     ii_initial += 1
         
