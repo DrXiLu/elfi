@@ -1287,11 +1287,11 @@ class BOLFI(BayesianOptimization):
         self.target_model.is_sampling = True  # enables caching for default RBF kernel
 
         tasks_ids = []
-        ii_initial = 0
-        retries = 100
+        retries = kwargs['max_retry_inits']
         
         # sampling is embarrassingly parallel, so depending on self.client this may parallelize
         for ii in range(n_chains):
+            ii_initial = 0
             seed = get_sub_seed(self.seed, ii)
             # discard bad initialization points
             while np.isinf(posterior.logpdf(initials[ii])):
@@ -1300,9 +1300,11 @@ class BOLFI(BayesianOptimization):
                         "BOLFI.sample: Cannot find enough acceptable initialization points!")
                 else:
                     if inds is None:
+                        sys.stderr.write('Failed with initial paramter set ' + str(initials[ii]) + '; varying parameters\n'
                         for i in range(len(initials[ii])):
                             initials[ii][i] = initials[ii][i] + 0.1*initials[ii][i]*(np.random.rand()-0.5)
                     else:
+                        sys.stderr.write('Failed with initial paramter set ' + str(initials[ii]) + '; using alternative set\n'
                         initials[ii] = initials[ii_initial]
                     ii_initial += 1
         
@@ -1340,8 +1342,7 @@ class BOLFI(BayesianOptimization):
                             n_samples,
                             initials[ii_initial],
                             posterior.logpdf,
-                            #[0.1] * self.target_model.input_dim,
-                            0.05 * initials[1,:], # 10% of initial values
+                            kwargs['sigma_proposals'], # 10% of initial values
                             warmup=warmup,
                             seed=seed
                         )
