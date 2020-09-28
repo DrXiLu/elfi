@@ -1287,8 +1287,8 @@ class BOLFI(BayesianOptimization):
         self.target_model.is_sampling = True  # enables caching for default RBF kernel
 
         tasks_ids = []
-        retries = kwargs['max_retry_inits']
         ii_initial = 0
+        retries = kwargs['max_retry_inits']
         
         # sampling is embarrassingly parallel, so depending on self.client this may parallelize
         for ii in range(n_chains):
@@ -1300,11 +1300,9 @@ class BOLFI(BayesianOptimization):
                         "BOLFI.sample: Cannot find enough acceptable initialization points!")
                 else:
                     if inds is None:
-                        sys.stderr.write('Failed with initial paramter set ' + str(initials[ii]) + '; varying parameters\n')
-                        for i,v in enumerate(initials[ii]):
+                        for i in range(len(initials[ii])):
                             initials[ii][i] = initials[ii][i] + 0.1*initials[ii][i]*(np.random.rand()-0.5)
                     else:
-                        sys.stderr.write('Failed with initial paramter set ' + str(initials[ii]) + '; using alternative set\n')
                         initials[ii] = initials[ii_initial]
                     ii_initial += 1
         
@@ -1313,7 +1311,7 @@ class BOLFI(BayesianOptimization):
                     self.client.apply(
                             mcmc.nuts,
                             n_samples,
-                            initials[ii],
+                            initials[ii_initial],
                             posterior.logpdf,
                             posterior.gradient_logpdf,
                             n_adapt=warmup,
@@ -1329,7 +1327,7 @@ class BOLFI(BayesianOptimization):
                             n_samples=n_samples,
                             prior=posterior.prior,
                             iterations=n_samples*2, # not sure what value this should take
-                            params0= initials[ii],
+                            params0= initials[ii_initial],
                             target=posterior.logpdf,
                             seed=seed
                     )
@@ -1340,7 +1338,7 @@ class BOLFI(BayesianOptimization):
                     self.client.apply(
                             mcmc.metropolis,
                             n_samples,
-                            initials[ii],
+                            initials[ii_initial],
                             posterior.logpdf,
                             kwargs['sigma_proposals'], # 10% of initial values
                             warmup=warmup,
