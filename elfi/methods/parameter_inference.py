@@ -23,6 +23,7 @@ from elfi.methods.utils import (GMDistribution, ModelPrior, arr2d_to_batch,
                                 batch_to_arr2d, ceil_to_batch_size, weighted_var)
 from elfi.model.elfi_model import ComputationContext, ElfiModel, NodeReference
 from elfi.utils import is_array
+from elfi.visualization.visualization import ProgressBar
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +120,8 @@ class ParameterInference:
         # inference after an iteration.
         self.state = dict(n_sim=0, n_batches=0)
         self.objective = dict()
+        self.progress_bar = ProgressBar(prefix='Progress', suffix='Complete',
+                                        decimals=1, length=50, fill='=')
 
     @property
     def pool(self):
@@ -253,6 +256,9 @@ class ParameterInference:
             self.iterate()
             if vis:
                 self.plot_state(interactive=True, **vis_opt)
+            if bar:
+                self.progress_bar.update_progressbar(self.state['n_batches'],
+                                                     self._objective_n_batches)
 
         self.batches.cancel_pending()
         if vis:
@@ -297,9 +303,8 @@ class ParameterInference:
         return self._objective_n_batches <= self.state['n_batches']
 
     def _allow_submit(self, batch_index):
-        return self.max_parallel_batches > self.batches.num_pending and \
-            self._has_batches_to_submit and \
-            (not self.batches.has_ready())
+        return (self.max_parallel_batches > self.batches.num_pending
+                and self._has_batches_to_submit and (not self.batches.has_ready()))
 
     @property
     def _has_batches_to_submit(self):
@@ -448,7 +453,7 @@ class Rejection(Sampler):
             In between (0,1). Define the threshold as the p-quantile of all the
             simulations. n_sim = n_samples/quantile.
         n_sim : int
-            Total number of simulations. The threshold will be the n_samples smallest
+            Total number of simulations. The threshold will be the n_samples-th smallest
             discrepancy among n_sim simulations.
 
         """
@@ -708,6 +713,9 @@ class SMC(Sampler):
     def _init_new_round(self):
         round = self.state['round']
 
+        reinit_msg = 'ABC-SMC Round {0} / {1}'.format(round + 1, self.objective['round'] + 1)
+        self.progress_bar.reinit_progressbar(scaling=(self.state['n_batches']),
+                                             reinit_msg=reinit_msg)
         dashes = '-' * 16
         logger.info('%s Starting round %d %s' % (dashes, round, dashes))
 
@@ -793,7 +801,7 @@ class BayesianOptimization(ParameterInference):
                  exploration_rate=10,
                  batch_size=1,
                  batches_per_acquisition=None,
-                 async=False,
+                 async_acq=False,
                  **kwargs):
         """Initialize Bayesian optimization.
 
@@ -824,7 +832,7 @@ class BayesianOptimization(ParameterInference):
         batches_per_acquisition : int, optional
             How many batches will be requested from the acquisition function at one go.
             Defaults to max_parallel_batches.
-        async : bool, optional
+        async_acq : bool, optional
             Allow acquisitions to be made asynchronously, i.e. do not wait for all the
             results from the previous acquisition before making the next. This can be more
             efficient with a large amount of workers (e.g. in cluster environments) but
@@ -862,7 +870,7 @@ class BayesianOptimization(ParameterInference):
         self.n_initial_evidence = n_initial
         self.n_precomputed_evidence = n_precomputed
         self.update_interval = update_interval
-        self.async = async
+        self.async_acq = async_acq
 
         self.state['n_evidence'] = self.n_precomputed_evidence
         self.state['last_GP_update'] = self.n_initial_evidence
@@ -1016,7 +1024,7 @@ class BayesianOptimization(ParameterInference):
         if not super(BayesianOptimization, self)._allow_submit(batch_index):
             return False
 
-        if self.async:
+        if self.async_acq:
             return True
 
         # Allow submitting freely as long we are still submitting initial evidence
@@ -1102,23 +1110,17 @@ class BayesianOptimization(ParameterInference):
     def plot_discrepancy(self, axes=None, **kwargs):
         """Plot acquired parameters vs. resulting discrepancy.
 
-        TODO: refactor
+        Parameters
+        ----------
+        axes : plt.Axes or arraylike of plt.Axes
+
+        Return
+        ------
+        axes : np.array of plt.Axes
+
         """
-        n_plots = self.target_model.input_dim
-        ncols = kwargs.pop('ncols', 5)
-        kwargs['sharey'] = kwargs.get('sharey', True)
-        shape = (max(1, n_plots // ncols), min(n_plots, ncols))
-        axes, kwargs = vis._create_axes(axes, shape, **kwargs)
-        axes = axes.ravel()
+        return vis.plot_discrepancy(self.target_model, self.parameter_names, axes=axes, **kwargs)
 
-        for ii in range(n_plots):
-            axes[ii].scatter(self.target_model._gp.X[:, ii], self.target_model._gp.Y[:, 0])
-            axes[ii].set_xlabel(self.parameter_names[ii])
-
-        axes[0].set_ylabel('Discrepancy')
-
-        return axes
-    
     def plot_gp(self, axes=None, resol=50, const=None, bounds=None, true_params=None, **kwargs):
         """Plot pairwise relationships as a matrix with parameters vs. discrepancy.
 
@@ -1141,6 +1143,7 @@ class BayesianOptimization(ParameterInference):
         """
         return vis.plot_gp(self.target_model, self.parameter_names, axes,
                            resol, const, bounds, true_params, **kwargs)
+
     def __getstate__(self):
         """Return state of the BOLFI fit to enable
             storage in a pickle for subsequent sampling
@@ -1216,7 +1219,7 @@ class BOLFI(BayesianOptimization):
         posterior : elfi.methods.posteriors.BolfiPosterior
 
         """
-        if self.state['n_batches'] == 0:
+        if self.state['n_evidence'] == 0:
             raise ValueError('Model is not fitted yet, please see the `fit` method.')
 
         return BolfiPosterior(self.target_model, threshold=threshold, prior=ModelPrior(self.model))
@@ -1228,6 +1231,7 @@ class BOLFI(BayesianOptimization):
                threshold=None,
                initials=None,
                algorithm='nuts',
+               sigma_proposals=None,
                n_evidence=None,
                iterations=10,
                **kwargs):
@@ -1258,7 +1262,10 @@ class BOLFI(BayesianOptimization):
             Initial values for the sampled parameters for each chain.
             Defaults to best evidence points.
         algorithm : string, optional
-            Sampling algorithm to use. Currently only 'nuts' is supported.
+            Sampling algorithm to use. Currently 'nuts'(default) and 'metropolis' are supported.
+        sigma_proposals : np.array
+            Standard deviations for Gaussian proposals of each parameter for Metropolis
+            Markov Chain sampler.
         n_evidence : int
             If the regression model is not fitted yet, specify the amount of evidence
 
@@ -1270,7 +1277,9 @@ class BOLFI(BayesianOptimization):
         if self.state['n_batches'] == 0:
             self.fit(n_evidence)
 
-        # TODO: other MCMC algorithms
+        # TODO: add more MCMC algorithms
+        if algorithm not in ['nuts', 'metropolis']:
+            raise ValueError("Unknown posterior sampler.")
 
         posterior = self.extract_posterior(threshold)
         warmup = warmup or n_samples // 2
@@ -1288,8 +1297,17 @@ class BOLFI(BayesianOptimization):
 
         tasks_ids = []
         ii_initial = 0
+        # Unsure if this should be retained
         retries = kwargs['max_retry_inits']
         
+        if algorithm == 'metropolis':
+            if sigma_proposals is None:
+                raise ValueError("Gaussian proposal standard deviations "
+                                 "have to be provided for Metropolis-sampling.")
+            elif sigma_proposals.shape[0] != self.target_model.input_dim:
+                raise ValueError("The length of Gaussian proposal standard "
+                                 "deviations must be n_params.")
+
         # sampling is embarrassingly parallel, so depending on self.client this may parallelize
         for ii in range(n_chains):
             seed = get_sub_seed(self.seed, ii)
@@ -1306,45 +1324,69 @@ class BOLFI(BayesianOptimization):
                         initials[ii] = initials[ii_initial]
                     ii_initial += 1
         
+#            if algorithm == 'nuts':
+#                tasks_ids.append(
+#                    self.client.apply(
+#                            mcmc.nuts,
+#                            n_samples,
+#                            initials[ii_initial],
+#                            posterior.logpdf,
+#                            posterior.gradient_logpdf,
+#                            n_adapt=warmup,
+#                            seed=seed,
+#                            **kwargs
+#                        )
+#                )
+#
+#            elif algorithm == 'smc':
+#                tasks_ids.append(
+#                    self.client.apply(
+#                            smc.smc,
+#                            n_samples=n_samples,
+#                            prior=posterior.prior,
+#                            iterations=n_samples*2, # not sure what value this should take
+#                            params0= initials[ii_initial],
+#                            target=posterior.logpdf,
+#                            seed=seed
+#                    )
+#                )
+#
+#            elif algorithm == 'metropolis':
+#                tasks_ids.append(
+#                    self.client.apply(
+#                            mcmc.metropolis,
+#                            n_samples,
+#                            initials[ii_initial],
+#                            posterior.logpdf,
+#                            kwargs['sigma_proposals'], # 10% of initial values
+#                            warmup=warmup,
+#                            seed=seed
+#                        )
+#                )
+
             if algorithm == 'nuts':
                 tasks_ids.append(
                     self.client.apply(
-                            mcmc.nuts,
-                            n_samples,
-                            initials[ii_initial],
-                            posterior.logpdf,
-                            posterior.gradient_logpdf,
-                            n_adapt=warmup,
-                            seed=seed,
-                            **kwargs
-                        )
-                )
+                        mcmc.nuts,
+                        n_samples,
+                        initials[ii_initial],
+                        posterior.logpdf,
+                        posterior.gradient_logpdf,
+                        n_adapt=warmup,
+                        seed=seed,
+                        **kwargs))
 
-            elif algorithm == 'smc':
-                tasks_ids.append(
-                    self.client.apply(
-                            smc.smc,
-                            n_samples=n_samples,
-                            prior=posterior.prior,
-                            iterations=n_samples*2, # not sure what value this should take
-                            params0= initials[ii_initial],
-                            target=posterior.logpdf,
-                            seed=seed
-                    )
-                )
-                
             elif algorithm == 'metropolis':
                 tasks_ids.append(
                     self.client.apply(
-                            mcmc.metropolis,
-                            n_samples,
-                            initials[ii_initial],
-                            posterior.logpdf,
-                            kwargs['sigma_proposals'], # 10% of initial values
-                            warmup=warmup,
-                            seed=seed
-                        )
-                )
+                        mcmc.metropolis,
+                        n_samples,
+                        initials[ii_initial],
+                        posterior.logpdf,
+                        sigma_proposals,
+                        warmup,
+                        seed=seed,
+                        **kwargs))
 
             ii_initial += 1
 
@@ -1354,14 +1396,12 @@ class BOLFI(BayesianOptimization):
             chains.append(self.client.get_result(id))
 
         chains = np.asarray(chains)
-
         print(
             "{} chains of {} iterations acquired. Effective sample size and Rhat for each "
             "parameter:".format(n_chains, n_samples))
         for ii, node in enumerate(self.parameter_names):
             print(node, mcmc.eff_sample_size(chains[:, :, ii]),
                   mcmc.gelman_rubin(chains[:, :, ii]))
-
         self.target_model.is_sampling = False
 
         return BolfiSample(
