@@ -793,7 +793,7 @@ class BayesianOptimization(ParameterInference):
                  exploration_rate=10,
                  batch_size=1,
                  batches_per_acquisition=None,
-                 async=False,
+                 use_async=False,
                  **kwargs):
         """Initialize Bayesian optimization.
 
@@ -824,7 +824,7 @@ class BayesianOptimization(ParameterInference):
         batches_per_acquisition : int, optional
             How many batches will be requested from the acquisition function at one go.
             Defaults to max_parallel_batches.
-        async : bool, optional
+        use_async : bool, optional
             Allow acquisitions to be made asynchronously, i.e. do not wait for all the
             results from the previous acquisition before making the next. This can be more
             efficient with a large amount of workers (e.g. in cluster environments) but
@@ -862,7 +862,7 @@ class BayesianOptimization(ParameterInference):
         self.n_initial_evidence = n_initial
         self.n_precomputed_evidence = n_precomputed
         self.update_interval = update_interval
-        self.async = async
+        self.use_async = use_async
 
         self.state['n_evidence'] = self.n_precomputed_evidence
         self.state['last_GP_update'] = self.n_initial_evidence
@@ -1016,7 +1016,7 @@ class BayesianOptimization(ParameterInference):
         if not super(BayesianOptimization, self)._allow_submit(batch_index):
             return False
 
-        if self.async:
+        if self.use_async:
             return True
 
         # Allow submitting freely as long we are still submitting initial evidence
@@ -1146,7 +1146,7 @@ class BayesianOptimization(ParameterInference):
             storage in a pickle for subsequent sampling
             of the surrogate posterior without refitting
         """
-        return self.model,self.output_names,self.batch_size,self.seed,self.max_parallel_batches,self.state,self.target_model, self.target_name, self.update_interval, self.async, self.n_precomputed_evidence, self.objective
+        return self.model,self.output_names,self.batch_size,self.seed,self.max_parallel_batches,self.state,self.target_model, self.target_name, self.update_interval, self.use_async, self.n_precomputed_evidence, self.objective
     
     def __setstate__(self, state):
         """Acquire state of the BOLFI fit to enable
@@ -1158,7 +1158,7 @@ class BayesianOptimization(ParameterInference):
         self.target_model = state[6]
         self.target_name = state[7]
         self.update_interval = state[9]
-        self.async = state[9]
+        self.use_async = state[9]
         self.n_precomputed_evidence = state[10]
         self.objective = state[11]
 
