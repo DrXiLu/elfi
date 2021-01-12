@@ -50,11 +50,11 @@ class GraphicalModel:
         out : dict
 
         """
-        return self.source_net.node[name]
+        return self.source_net.nodes[name]
 
     def set_node(self, name, state):
         """Set the state of the node."""
-        self.source_net.node[name] = state
+        self.source_net.nodes[name] = state
 
     def has_node(self, name):
         """Whether the graph has a node `name`."""
@@ -103,7 +103,7 @@ class GraphicalModel:
         """
         out_edges = self.source_net.out_edges(node, data=True)
         self.remove_node(node)
-        self.source_net.add_node(node, self.source_net.node[updating_node])
+        self.source_net.add_node(node, self.source_net.nodes[updating_node])
         self.source_net.add_edges_from(out_edges)
 
         # Transfer incoming edges
