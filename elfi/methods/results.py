@@ -472,7 +472,7 @@ class BolfiSample(Sample):
             warmed_up = chains[:, warmup:, :]
             concatenated = warmed_up.reshape((-1, ) + shape[2:])
             outputs = dict(zip(parameter_names, concatenated.T))
-        elif algorithm=='smc':
+        elif algorithm=='smc' or algorithm=='metropolis':
             outputs = dict(zip(parameter_names, chains.T))
         
         super(BolfiSample, self).__init__(

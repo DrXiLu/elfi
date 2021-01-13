@@ -1301,6 +1301,7 @@ class BOLFI(BayesianOptimization):
                 raise ValueError("The shape of initials must be (n_chains, n_params).")
         else:
             inds = np.argsort(self.target_model.Y[:, 0])
+            print("Inds: " + str(inds))
             initials = np.asarray(self.target_model.X[inds])
 
         self.target_model.is_sampling = True  # enables caching for default RBF kernel
@@ -1321,17 +1322,28 @@ class BOLFI(BayesianOptimization):
         for ii in range(n_chains):
             seed = get_sub_seed(self.seed, ii)
             # discard bad initialization points
-            while np.isinf(posterior.logpdf(initials[ii])):
-                if ii_initial == retries or (inds is not None and ii_initial > inds):
+            while np.isinf(posterior.logpdf(initials[ii_initial])):
+                print("ii: " + str(ii) + ' ii_initial: ' + str(ii_initial) + " initials: " + str(initials[ii_initial]) + " inds: " + str(inds) + " retries: " + str(retries))
+                ii_initial += 1
+                if inds is None or ii_initial == len(inds):
                     raise ValueError(
                         "BOLFI.sample: Cannot find enough acceptable initialization points!")
-                else:
-                    if inds is None:
-                        for i in range(len(initials[ii])):
-                            initials[ii][i] = initials[ii][i] + 0.1*initials[ii][i]*(np.random.rand()-0.5)
-                    else:
-                        initials[ii] = initials[ii_initial]
-                    ii_initial += 1
+#
+#        for ii in range(n_chains):
+#            seed = get_sub_seed(self.seed, ii)
+#            print("ii: " + str(ii) + " initials: " + str(initials[ii]) + " inds: " + str(inds) + " retries: " + str(retries))
+#            # discard bad initialization points
+#            while np.isinf(posterior.logpdf(initials[ii])):
+#                if ii_initial == retries or (inds is not None and ii_initial > inds):
+#                    raise ValueError(
+#                        "BOLFI.sample: Cannot find enough acceptable initialization points!")
+#                else:
+#                    if inds is None:
+#                        for i in range(len(initials[ii])):
+#                            initials[ii][i] = initials[ii][i] + 0.1*initials[ii][i]*(np.random.rand()-0.5)
+#                    else:
+#                        initials[ii] = initials[ii_initial]
+#                    ii_initial += 1
         
 #            if algorithm == 'nuts':
 #                tasks_ids.append(
@@ -1396,8 +1408,7 @@ class BOLFI(BayesianOptimization):
                         posterior.logpdf,
                         sigma_proposals,
                         warmup,
-                        seed=seed,
-                        **kwargs))
+                        seed=seed))
 
 
             ii_initial += 1
