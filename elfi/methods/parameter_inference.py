@@ -1323,7 +1323,6 @@ class BOLFI(BayesianOptimization):
             seed = get_sub_seed(self.seed, ii)
             # discard bad initialization points
             while np.isinf(posterior.logpdf(initials[ii_initial])):
-                print("ii: " + str(ii) + ' ii_initial: ' + str(ii_initial) + " initials: " + str(initials[ii_initial]) + " inds: " + str(inds) + " retries: " + str(retries))
                 ii_initial += 1
                 if inds is None or ii_initial == len(inds):
                     raise ValueError(
