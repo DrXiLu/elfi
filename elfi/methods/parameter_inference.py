@@ -1308,7 +1308,7 @@ class BOLFI(BayesianOptimization):
 
         tasks_ids = []
         ii_initial = 0
-        retries = kwargs['max_retry_inits'] # Added from recent merge
+        retries = kwargs['max_retry_inits']
         
         if algorithm == 'metropolis':
             if sigma_proposals is None:
@@ -1328,65 +1328,7 @@ class BOLFI(BayesianOptimization):
                 if inds is None or ii_initial == len(inds):
                     raise ValueError(
                         "BOLFI.sample: Cannot find enough acceptable initialization points!")
-#
-#        for ii in range(n_chains):
-#            seed = get_sub_seed(self.seed, ii)
-#            print("ii: " + str(ii) + " initials: " + str(initials[ii]) + " inds: " + str(inds) + " retries: " + str(retries))
-#            # discard bad initialization points
-#            while np.isinf(posterior.logpdf(initials[ii])):
-#                if ii_initial == retries or (inds is not None and ii_initial > inds):
-#                    raise ValueError(
-#                        "BOLFI.sample: Cannot find enough acceptable initialization points!")
-#                else:
-#                    if inds is None:
-#                        for i in range(len(initials[ii])):
-#                            initials[ii][i] = initials[ii][i] + 0.1*initials[ii][i]*(np.random.rand()-0.5)
-#                    else:
-#                        initials[ii] = initials[ii_initial]
-#                    ii_initial += 1
-        
-#            if algorithm == 'nuts':
-#                tasks_ids.append(
-#                    self.client.apply(
-#                            mcmc.nuts,
-#                            n_samples,
-#                            initials[ii_initial],
-#                            posterior.logpdf,
-#                            posterior.gradient_logpdf,
-#                            n_adapt=warmup,
-#                            seed=seed,
-#                            **kwargs
-#                        )
-#                )
-#
-#            elif algorithm == 'smc':
-#                tasks_ids.append(
-#                    self.client.apply(
-#                            smc.smc,
-#                            n_samples=n_samples,
-#                            prior=posterior.prior,
-#                            iterations=n_samples*2, # not sure what value this should take
-#                            params0= initials[ii_initial],
-#                            target=posterior.logpdf,
-#                            seed=seed
-#                    )
-#                )
-#
-#            elif algorithm == 'metropolis':
-#                tasks_ids.append(
-#                    self.client.apply(
-#                            mcmc.metropolis,
-#                            n_samples,
-#                            initials[ii_initial],
-#                            posterior.logpdf,
-#                            kwargs['sigma_proposals'], # 10% of initial values
-#                            warmup=warmup,
-#                            seed=seed
-#                        )
-#                )
 
-
-# From recent merge:
             if algorithm == 'nuts':
                 tasks_ids.append(
                     self.client.apply(
